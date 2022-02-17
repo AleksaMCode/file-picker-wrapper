@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Waiting...</title>
+  </head>
+
+  <body>
+    <script src="oidc-client.min.js"></script>
+    <script>
+      Oidc.Log.logger = console;
+      Oidc.Log.level = Oidc.Log.DEBUG;
+
+      new Oidc.UserManager().signinPopupCallback();
+    </script>
+  </body>
+</html>

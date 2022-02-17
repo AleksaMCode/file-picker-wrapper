@@ -1,0 +1,25 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CERNBox file-picker</title>
+  </head>
+  <body>
+    <script src="file-picker.js"></script>
+    <file-picker
+      id="file-picker"
+      variation="resource"
+      is-select-btn-displayed="false"
+    ></file-picker>
+    <script>
+      const item = document.getElementById('file-picker');
+      let resources = [];
+
+      item.addEventListener('update', (event) => {
+        resources = event.detail[0];
+        paths = resources.map((r) => r.path).join('\n');
+        console.log(`sending message: ${paths}`);
+        window.parent.postMessage(paths, 'https://roshar.cern.ch');
+      });
+    </script>
+  </body>
+</html>
