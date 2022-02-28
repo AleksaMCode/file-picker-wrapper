@@ -11,7 +11,9 @@
       Oidc.Log.logger = console;
       Oidc.Log.level = Oidc.Log.DEBUG;
 
-      new Oidc.UserManager().signinPopupCallback();
+      new Oidc.UserManager().signinPopupCallback(
+        window.location.href.split('?')[1],
+      );
     </script>
   </body>
 </html>
