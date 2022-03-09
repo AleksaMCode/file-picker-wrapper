@@ -7,51 +7,24 @@
     <script src="file-picker.min.js"></script>
     <file-picker id="file-picker" variation="resource" is-select-btn-displayed="false"></file-picker>
     <script>
-      let publicLinks = {};
-
-      const fetchPublicLink = async path => {
+      let authTokenKey;
+      (async () => {
         const settingsRes = await fetch('file-picker-config.json');
         const settings = await settingsRes.json();
-        const serverUrl = `${settings.server}/ocs/v1.php/apps/files_sharing/api/v1/shares`;
-        const expireDate = new Date();
-        expireDate.setUTCHours(23, 59, 59);
-        expireDate.setDate(expireDate.getDate() + 1);
-        const data = new FormData();
-        data.append('shareType', 3);
-        data.append('path', path);
-        data.append('permissions', 1);
-        data.append('expireDate', expireDate.toISOString());
-
-        // Handle auth
-        const authTokenKey = `oc_oAuthuser:${settings.openIdConnect.authority}:${settings.openIdConnect.client_id}`;
-        const accessToken = JSON.parse(localStorage.getItem(authTokenKey)).access_token;
-
-        // Generate public link
-        const publicLinkRes = await fetch(serverUrl, {
-          method: 'POST',
-          body: data,
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const publicLinkText = await publicLinkRes.text();
-        const parser = new DOMParser();
-        const publicLinkDocument = parser.parseFromString(publicLinkText, 'text/xml');
-        const token = publicLinkDocument.querySelector('token').textContent;
-        const fileName = path.split('/').pop();
-        return publicLink = `https://newqa.cernbox.cern.ch/remote.php/dav/public-files/${token}/${fileName}`;
-      };
+        authTokenKey = `oc_oAuthuser:${settings.openIdConnect.authority}:${settings.openIdConnect.client_id}`;
+      })();
 
       document.getElementById('file-picker').addEventListener('update', async event => {
-        paths = event.detail[0].map((r) => r.path);
-        newPaths = paths.filter(path => !publicLinks[path]);
-        for (path of newPaths) {
-          publicLinks[path] = await fetchPublicLink(path);
-        }
-        const selection = paths.map(path => publicLinks[path]);
-        if (selection) {
-          window.parent.postMessage(selection.join('\n'), 'https://roshar.cern.ch');
+        const accessToken = JSON.parse(localStorage.getItem(authTokenKey)).access_token;
+        const paths = event.detail[0].map((r) => r.path);
+        // TODO: change hardcoded url for settings.server when server actually works
+        const fileUrls = paths.map(path => `https://newqa.cernbox.cern.ch/remote.php/webdav${path}?access_token=${accessToken}`);
+        
+        if (fileUrls.length) {
+          // TODO: find a way to determine targetOrigin correcly
+          window.parent.postMessage(fileUrls.join('\n'), 'https://roshar.cern.ch');
         }
       });
     </script>
-    <link rel="stylesheet" href="style.css">
   </body>
 </html>
