@@ -19,7 +19,7 @@
         const paths = event.detail[0].map((r) => r.path);
         // TODO: change hardcoded url for settings.server when server actually works
         const fileUrls = paths.map(path => `https://newqa.cernbox.cern.ch/remote.php/webdav${path}?access_token=${accessToken}`);
-        
+
         if (fileUrls.length) {
           // TODO: find a way to determine targetOrigin correcly
           window.parent.postMessage(fileUrls.join('\n'), 'https://roshar.cern.ch');

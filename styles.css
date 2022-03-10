@@ -1,4 +1,23 @@
+* {
+  font-family: 'Liberation Sans', sans-serif;
+  font-size: 13px !important;
+}
+
+html,
+body,
 #oc-file-picker {
-  overflow-y: scroll;
-  background-color: red;
+  height: 100%;
+  --oc-color-text-default: #777;
+  --oc-color-swatch-passive-default: #007cac;
+  --oc-color-swatch-primary-default: #007cac;
+  --oc-color-swatch-brand-default: #007cac;
+  --oc-color-text-muted: #777;
+}
+
+.oc-button-passive-raw {
+  font-weight: 700;
+}
+
+.uk-text-meta {
+  font-style: italic;
 }
