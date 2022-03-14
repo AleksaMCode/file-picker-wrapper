@@ -7,6 +7,7 @@
     <script src="file-picker.min.js"></script>
     <file-picker id="file-picker" variation="resource" is-select-btn-displayed="false"></file-picker>
     <script>
+      let origin 
       let authTokenKey;
       (async () => {
         const settingsRes = await fetch('file-picker-config.json');
@@ -14,15 +15,22 @@
         authTokenKey = `oc_oAuthuser:${settings.openIdConnect.authority}:${settings.openIdConnect.client_id}`;
       })();
 
+      (async () => {
+        const allowedOriginsRes = await fetch('allowed-origins.json');
+        const allowedOrigins = await allowedOriginsRes.json();
+        const params = new URLSearchParams(window.location.search);
+        currentOrigin = params.get('origin');
+        origin = allowedOrigins.includes(currentOrigin) ? currentOrigin : null;
+      })();
+
       document.getElementById('file-picker').addEventListener('update', async event => {
-        const accessToken = JSON.parse(localStorage.getItem(authTokenKey)).access_token;
+        const accessToken = JSON.parse(sessionStorage.getItem(authTokenKey)).access_token;
         const paths = event.detail[0].map((r) => r.path);
         // TODO: change hardcoded url for settings.server when server actually works
         const fileUrls = paths.map(path => `https://newqa.cernbox.cern.ch/remote.php/webdav${path}?access_token=${accessToken}`);
 
         if (fileUrls.length) {
-          // TODO: find a way to determine targetOrigin correcly
-          window.parent.postMessage(fileUrls.join('\n'), 'https://roshar.cern.ch');
+          window.parent.postMessage(fileUrls.join('\n'), origin);
         }
       });
     </script>
