@@ -7,12 +7,12 @@
     <script src="file-picker.min.js"></script>
     <file-picker id="file-picker" variation="resource" is-select-btn-displayed="false"></file-picker>
     <script>
-      let origin 
-      let authTokenKey;
+      let origin, authTokenKey, server;
       (async () => {
         const settingsRes = await fetch('file-picker-config.json');
         const settings = await settingsRes.json();
         authTokenKey = `oc_oAuthuser:${settings.openIdConnect.authority}:${settings.openIdConnect.client_id}`;
+        server = settings.server;
       })();
 
       (async () => {
@@ -26,12 +26,8 @@
       document.getElementById('file-picker').addEventListener('update', async event => {
         const accessToken = JSON.parse(sessionStorage.getItem(authTokenKey)).access_token;
         const paths = event.detail[0].map((r) => r.path);
-        // TODO: change hardcoded url for settings.server when server actually works
-        const fileUrls = paths.map(path => `https://newqa.cernbox.cern.ch/remote.php/webdav${path}?access_token=${accessToken}`);
-
-        if (fileUrls.length) {
-          window.parent.postMessage(fileUrls.join('\n'), origin);
-        }
+        const files = paths.map(path => `${server}/remote.php/webdav${path}?access_token=${accessToken}`);
+        window.parent.postMessage({files}, origin);
       });
     </script>
   </body>
