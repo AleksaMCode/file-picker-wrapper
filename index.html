@@ -14,14 +14,27 @@
         authTokenKey = `oc_oAuthuser:${settings.openIdConnect.authority}:${settings.openIdConnect.client_id}`;
         server = settings.server;
       })();
+      
+      const params = new URLSearchParams(window.location.search);
+      const originParam = params.get('origin');
+      if (!originParam) {
+        throw new Error('You must specify a origin query parameter');
+      }
+      
+      const currentOrigin = new URL(originParam);
 
-      (async () => {
-        const allowedOriginsRes = await fetch('allowed-origins.json');
-        const allowedOrigins = await allowedOriginsRes.json();
-        const params = new URLSearchParams(window.location.search);
-        currentOrigin = params.get('origin');
-        origin = allowedOrigins.includes(currentOrigin) ? currentOrigin : null;
-      })();
+      if (currentOrigin.host.endsWith('cern.ch')) {
+        origin = currentOrigin.href;
+      } else {
+        (async () => {
+          const allowedOriginsRes = await fetch('allowed-origins.json');
+          const allowedOrigins = await allowedOriginsRes.json();
+          origin = allowedOrigins.includes(currentOrigin) ? currentOrigin : null;
+          if (!origin) {
+            throw new Error('Invalid origin');
+          }
+        })();
+      }
 
       document.getElementById('file-picker').addEventListener('update', async event => {
         const accessToken = JSON.parse(sessionStorage.getItem(authTokenKey)).access_token;
