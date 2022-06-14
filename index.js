@@ -86,9 +86,11 @@ const handleUpdatePublicLink = async paths => {
 (async () => {
   await parseParams();
   await getConfig();
-  await getAccessToken();
 
   document.getElementById('file-picker').addEventListener('update', async event => {
+    // Get the newest access token.
+    await getAccessToken();
+
     const paths = event.detail[0].map(r => r.path);
     const files = config.publicLink ? await handleUpdatePublicLink(paths) : handleUpdateBasic(paths);
 
