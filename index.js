@@ -11,6 +11,20 @@ const config = {
   accessToken: null,
 };
 
+const parseParams = async () => {
+  if (!config.origin) {
+    throw new Error('You must specify a origin query parameter');
+  }
+
+  config.origin = new URL(config.origin).origin;
+  if (!config.origin.endsWith('cern.ch')) {
+    const allowedOrigins = await getAllowedOrigins();
+    if (!allowedOrigins.includes(config.origin)) {
+      throw new Error('Invalid origin');
+    }
+  }
+};
+
 const getConfig = async () => {
   const configRes = await fetch('file-picker-config.json');
   const configData = await configRes.json();
@@ -25,24 +39,27 @@ const getAllowedOrigins = async () => {
   return allowedOrigins;
 };
 
-const getAccessToken = () => {
-  config.accessToken = JSON.parse(
-    sessionStorage.getItem(`oc_oAuthuser:${config.authority}:${config.clientId}`)
-  ).access_token;
+const checkAccessToken = async accessToken => {
+  const accessCheckUrl = `${config.server}/remote.php/webdav/?access_token=${accessToken}`;
+  try {
+    await fetch(accessCheckUrl, { method: 'PROPFIND' });
+    return true;
+  } catch (e) {
+    // right now cernbox causes a cors error when not authenticated, no way to check status
+    console.log("Our access token does not seem to work, let's clean up");
+    sessionStorage.clear();
+    location.reload();
+  }
 };
 
-const parseParams = async () => {
-  if (!config.origin) {
-    throw new Error('You must specify a origin query parameter');
-  }
+const getAccessToken = async () => {
+  const accessToken = JSON.parse(
+    sessionStorage.getItem(`oc_oAuthuser:${config.authority}:${config.clientId}`)
+  ).access_token;
 
-  config.origin = new URL(config.origin).origin;
-  if (!config.origin.endsWith('cern.ch')) {
-    const allowedOrigins = await getAllowedOrigins();
-    if (!allowedOrigins.includes(config.origin)) {
-      throw new Error('Invalid origin');
-    }
-  }
+  const valid = await checkAccessToken(accessToken);
+
+  config.accessToken = valid ? accessToken : null;
 };
 
 const handleUpdateBasic = paths => {
@@ -86,6 +103,7 @@ const handleUpdatePublicLink = async paths => {
 (async () => {
   await parseParams();
   await getConfig();
+  await getAccessToken();
 
   document.getElementById('file-picker').addEventListener('update', async event => {
     // Get the newest access token.
