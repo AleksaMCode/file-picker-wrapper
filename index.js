@@ -53,13 +53,15 @@ const checkAccessToken = async accessToken => {
 };
 
 const getAccessToken = async () => {
-  const accessToken = JSON.parse(
-    sessionStorage.getItem(`oc_oAuthuser:${config.authority}:${config.clientId}`)
-  ).access_token;
+  const authKey = JSON.parse(sessionStorage.getItem(`oc_oAuthuser:${config.authority}:${config.clientId}`));
 
-  const valid = await checkAccessToken(accessToken);
+  if (!authKey) {
+    return null;
+  }
 
-  config.accessToken = valid ? accessToken : null;
+  const valid = await checkAccessToken(authKey.access_token);
+
+  config.accessToken = valid ? authKey.access_token : null;
 };
 
 const handleUpdateBasic = paths => {
