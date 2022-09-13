@@ -11,18 +11,27 @@ const config = {
   accessToken: null,
 };
 
+const wildcardToRegex = s => {
+  return new RegExp('^' + s.split(/\*+/).map(regexEscape).join('.*') + '$');
+};
+
+const regexEscape = s => {
+  return s.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+};
+
 const parseParams = async () => {
   if (!config.origin) {
     throw new Error('You must specify a origin query parameter');
   }
 
-  config.origin = new URL(config.origin).origin;
-  if (!config.origin.endsWith('cern.ch')) {
-    const allowedOrigins = await getAllowedOrigins();
-    if (!allowedOrigins.includes(config.origin)) {
-      throw new Error('Invalid origin');
+  const allowedOrigins = await getAllowedOrigins();
+  for (allowedOrigin of allowedOrigins) {
+    if (config.origin.match(wildcardToRegex(allowedOrigin))) {
+      return;
     }
   }
+
+  throw new Error(`Invalid origin ${config.origin}`);
 };
 
 const getConfig = async () => {
