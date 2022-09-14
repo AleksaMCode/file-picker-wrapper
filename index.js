@@ -35,6 +35,8 @@ const parseParams = async () => {
 };
 
 const getConfig = async () => {
+  if (config.debug) console.info('fetching configuration');
+
   const configRes = await fetch('file-picker-config.json');
   const configData = await configRes.json();
   config.server = configData.server;
@@ -54,10 +56,12 @@ const checkAccessToken = async accessToken => {
     await fetch(accessCheckUrl, { method: 'PROPFIND' });
     return true;
   } catch (e) {
-    // right now cernbox causes a cors error when not authenticated, no way to check status
-    console.log("Our access token does not seem to work, let's clean up");
+    // Right now cernbox causes a cors error when not authenticated, so there is no way to check status.
+    if (config.debug) console.info('access token does not seem to work, cleaning up');
+    sendSelection();
     sessionStorage.clear();
     location.reload();
+    return false;
   }
 };
 
@@ -65,11 +69,11 @@ const getAccessToken = async () => {
   const authKey = JSON.parse(sessionStorage.getItem(`oc_oAuthuser:${config.authority}:${config.clientId}`));
 
   if (!authKey) {
-    return null;
+    config.accessToken = null;
+    return;
   }
 
   const valid = await checkAccessToken(authKey.access_token);
-
   config.accessToken = valid ? authKey.access_token : null;
 };
 
@@ -106,25 +110,39 @@ const handleUpdatePublicLink = async paths => {
     publicLinks[path] = await generatePublicLink(path);
   }
 
-  if (config.debug) console.info('Public link cache', publicLinks);
+  if (config.debug) console.info('public link cache', publicLinks);
 
   return paths.map(path => publicLinks[path]);
 };
+
+const sendSelection = (files = [], ready = false) => {
+  const payload = { files, ready };
+  if (config.debug) console.info('sending message to parent', payload, config.origin);
+
+  window.parent.postMessage(payload, config.origin);
+};
+
+async function handleUpdate(event) {
+  // Send clear selected files and not ready while the filepicker works.
+  sendSelection();
+
+  // Get the newest access token.
+  if (!config.clientId) {
+    await getConfig();
+  }
+  await getAccessToken();
+
+  const paths = event.detail[0].map(r => r.path);
+  const files = config.publicLink ? await handleUpdatePublicLink(paths) : handleUpdateBasic(paths);
+
+  sendSelection(files, true);
+}
 
 (async () => {
   await parseParams();
   await getConfig();
   await getAccessToken();
 
-  document.getElementById('file-picker').addEventListener('update', async event => {
-    // Get the newest access token.
-    await getAccessToken();
-
-    const paths = event.detail[0].map(r => r.path);
-    const files = config.publicLink ? await handleUpdatePublicLink(paths) : handleUpdateBasic(paths);
-
-    if (config.debug) console.info('Sending message to parent:', { files }, config.origin);
-
-    window.parent.postMessage({ files }, config.origin);
-  });
+  const filePickerElem = document.getElementById('file-picker');
+  filePickerElem.addEventListener('update', handleUpdate);
 })();
