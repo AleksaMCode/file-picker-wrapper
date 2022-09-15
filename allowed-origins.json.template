@@ -1,1 +1,1 @@
-["https://www.example.com", "https://www.foo.com"]
+["https://*.example.com", "https://www.foo.com"]
