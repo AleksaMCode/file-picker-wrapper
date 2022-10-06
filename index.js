@@ -108,7 +108,7 @@ const generatePublicLink = async () => {
   const publicLinkDocument = parser.parseFromString(publicLinkText, 'text/xml');
   const token = publicLinkDocument.querySelector('token').textContent;
   const fileName = path.split('/').pop();
-  return `${config.server}/remote.php/dav/public-files/${token}/${fileName}`;
+  return `${config.server}/remote.php/dav/public-files/${token}/${encodeURIComponent(fileName)}`;
 };
 
 const handleUpdatePublicLink = async paths => {
