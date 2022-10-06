@@ -4,7 +4,7 @@ const config = {
   debug: params.get('debug') || false,
   origin: params.get('origin'),
   publicLink: params.get('publicLink') || false,
-  publicLinkDuration: parseInt(params.get('publicLinkDuration'), 10) || 7,
+  publicLinkDuration: parseInt(params.get('publicLinkDuration'), 10),
   publicLinkDescription: params.get('publicLinkDescription'),
   server: null,
   authority: null,
@@ -84,14 +84,16 @@ const handleUpdateBasic = paths => {
 
 const generatePublicLink = async () => {
   const publicLinkRequestUrl = `${config.server}/ocs/v1.php/apps/files_sharing/api/v1/shares`;
-  const expireDate = new Date();
-  expireDate.setDate(expireDate.getDate() + config.publicLinkDuration);
   const data = new FormData();
   data.append('shareType', 3);
   data.append('path', path);
   data.append('permissions', 1);
-  data.append('expireDate', expireDate.toISOString());
   data.append('internal', true);
+  if (config.publicLinkDuration) {
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + config.publicLinkDuration);
+    data.append('expireDate', expireDate.toISOString());
+  }
   if (config.publicLinkDescription) {
     data.append('description', config.publicLinkDescription);
   }
