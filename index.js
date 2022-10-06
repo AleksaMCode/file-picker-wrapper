@@ -5,6 +5,7 @@ const config = {
   origin: params.get('origin'),
   publicLink: params.get('publicLink') || false,
   publicLinkDuration: parseInt(params.get('publicLinkDuration'), 10) || 7,
+  publicLinkDescription: params.get('publicLinkDescription'),
   server: null,
   authority: null,
   clientId: null,
@@ -90,6 +91,10 @@ const generatePublicLink = async () => {
   data.append('path', path);
   data.append('permissions', 1);
   data.append('expireDate', expireDate.toISOString());
+  data.append('internal', true);
+  if (config.publicLinkDescription) {
+    data.append('description', config.publicLinkDescription);
+  }
 
   const publicLinkRes = await fetch(publicLinkRequestUrl, {
     method: 'POST',
