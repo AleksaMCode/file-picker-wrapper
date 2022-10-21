@@ -3,6 +3,7 @@ const params = new URLSearchParams(window.location.search);
 const config = {
   debug: params.get('debug') || false,
   origin: params.get('origin'),
+  variation: params.get('locationPicker') ? 'location' : 'resource',
   publicLink: params.get('publicLink') || false,
   publicLinkDuration: parseInt(params.get('publicLinkDuration'), 10),
   publicLinkDescription: params.get('publicLinkDescription'),
@@ -11,6 +12,13 @@ const config = {
   clientId: null,
   accessToken: null,
 };
+
+const filepickerContainer = document.querySelector('#filepicker-container');
+const filepickerElem = document.createElement('file-picker');
+filepickerElem.id = 'file-picker';
+filepickerElem.setAttribute('variation', config.variation);
+filepickerElem.setAttribute('is-select-btn-displayed', false);
+filepickerContainer.appendChild(filepickerElem);
 
 const wildcardToRegex = s => {
   return new RegExp('^' + s.split(/\*+/).map(regexEscape).join('.*') + '$');
@@ -51,12 +59,16 @@ const getAllowedOrigins = async () => {
   return allowedOrigins;
 };
 
-const checkAccessToken = async accessToken => {
+const checkAccessToken = async (accessToken, expiresAt) => {
   const accessCheckUrl = `${config.server}/remote.php/webdav/?access_token=${accessToken}`;
   try {
-    await fetch(accessCheckUrl, { method: 'PROPFIND' });
+    await fetch(accessCheckUrl, { method: 'HEAD', headers: { Authorization: `Bearer ${accessToken}` } });
     return true;
   } catch (e) {
+    if (expiresAt < Date.now() / 1000) {
+      if (config.debug) console.info('access token is expired, auth will take care of it');
+      return false;
+    }
     // Right now cernbox causes a cors error when not authenticated, so there is no way to check status.
     if (config.debug) console.info('access token does not seem to work, cleaning up');
     sendSelection();
@@ -74,7 +86,7 @@ const getAccessToken = async () => {
     return;
   }
 
-  const valid = await checkAccessToken(authKey.access_token);
+  const valid = await checkAccessToken(authKey.access_token, authKey.expires_at);
   config.accessToken = valid ? authKey.access_token : null;
 };
 
@@ -118,18 +130,15 @@ const handleUpdatePublicLink = async paths => {
   }
 
   if (config.debug) console.info('public link cache', publicLinks);
-
   return paths.map(path => publicLinks[path]);
 };
 
-const sendSelection = (files = [], ready = false) => {
-  const payload = { files, ready };
+const sendSelection = (payload = { files: [], ready: false }) => {
   if (config.debug) console.info('sending message to parent', payload, config.origin);
-
   window.parent.postMessage(payload, config.origin);
 };
 
-async function handleUpdate(event) {
+async function handleUpdateSelection(event) {
   // Send clear selected files and not ready while the filepicker works.
   sendSelection();
 
@@ -142,7 +151,21 @@ async function handleUpdate(event) {
   const paths = event.detail[0].map(r => r.path);
   const files = config.publicLink ? await handleUpdatePublicLink(paths) : handleUpdateBasic(paths);
 
-  sendSelection(files, true);
+  sendSelection({ files, ready: true });
+}
+
+async function handleUpdateLocation(event) {
+  const paths = event.detail[0].map(r => r.path);
+
+  if (!paths.length) {
+    sendSelection();
+    return;
+  }
+
+  const username = sessionStorage.getItem('sub');
+  await getAccessToken();
+
+  sendSelection({ files: paths, username, accessToken: config.accessToken, ready: true });
 }
 
 (async () => {
@@ -151,5 +174,10 @@ async function handleUpdate(event) {
   await getAccessToken();
 
   const filePickerElem = document.getElementById('file-picker');
-  filePickerElem.addEventListener('update', handleUpdate);
+
+  if (config.variation === 'resource') {
+    filePickerElem.addEventListener('update', handleUpdateSelection);
+  } else if (config.variation === 'location') {
+    filePickerElem.addEventListener('update', handleUpdateLocation);
+  }
 })();
