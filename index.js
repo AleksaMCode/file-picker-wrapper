@@ -2,8 +2,10 @@ const publicLinks = {};
 const params = new URLSearchParams(window.location.search);
 const config = {
   debug: params.get('debug') || false,
+  /* When working on a file-picker-wrapper this should be set to 'https://localhost' */
   origin: params.get('origin'),
   variation: params.get('locationPicker') ? 'location' : 'resource',
+  /* When working on a file-picker-wrapper this should be set to `true` */
   publicLink: params.get('publicLink') || false,
   publicLinkDuration: parseInt(params.get('publicLinkDuration'), 10),
   publicLinkDescription: params.get('publicLinkDescription'),
